@@ -100,6 +100,16 @@ a{ color:inherit; text-decoration:none; }
 .top-header .brand-text b{ font-family:var(--font-display); font-weight:900; font-size:16px; letter-spacing:.02em; }
 .top-header .brand-text span{ font-size:11px; color:var(--color-ink-soft); text-transform:uppercase; letter-spacing:.1em; }
 .obs-mode .top-header{ display:none; }
+.top-header .is-link{
+  margin-left:auto; display:inline-flex; align-items:center; gap:7px;
+  padding:9px 16px; border-radius:999px; border:1px solid var(--color-primary-line);
+  background:var(--color-primary-soft); color:var(--color-accent);
+  font-size:12.5px; font-weight:700; letter-spacing:.02em; white-space:nowrap;
+  transition:all .2s var(--ease);
+}
+.top-header .is-link:hover{ background:var(--color-accent); color:#1C1D21; border-color:var(--color-accent); transform:translateY(-1px); box-shadow:var(--shadow-glow); }
+.top-header .is-link svg{ width:13px; height:13px; flex:none; }
+@media (max-width:560px){ .top-header .is-link span{ display:none; } .top-header .is-link{ padding:9px 12px; } }
 
 /* ---------- SETUP SCREEN ---------- */
 .setup{
@@ -453,6 +463,10 @@ function headerHtml(){
   return `<div class="top-header">
     <div class="brand-mark"><img src="favicon.png" alt="logo"></div>
     <div class="brand-text"><b>MAP VETO</b><span>CS2 Tournament Tool</span></div>
+    <a class="is-link" href="https://infinityseries2025-art.github.io/InfinitySite-/index.html" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M13 5l7 7-7 7M4 12h16"/></svg>
+      <span>Infinity Series</span>
+    </a>
   </div>`;
 }
 
@@ -571,7 +585,7 @@ function linkRow(label, url){
     <button class="btn secondary" onclick="navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}');this.textContent='Скопировано ✓';setTimeout(()=>this.textContent='Копировать',1400)">Копировать</button></div></div>`;
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function footerNote(){ return `<div class="footer-note">Работает на <b>Map Veto</b> · Firestore realtime</div>`; }
+function footerNote(){ return `<div class="footer-note">Создано <b>Infinity Series</b> · Работает на Map Veto · Firestore realtime</div>`; }
 
 // ---------- Turn logic ----------
 function currentActionIndex(){ return state.actions.length; }

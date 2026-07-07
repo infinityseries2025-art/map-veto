@@ -2,159 +2,280 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>CS2 Map Veto</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Map Veto — CS2</title>
+<link rel="icon" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,500&display=swap" rel="stylesheet">
 <style>
+/* =========================================================
+   ТОКЕНЫ ДИЗАЙНА — та же палитра, что и на основном сайте
+========================================================= */
 :root{
-  --bg:#0b0d10;
-  --panel:#12161b;
-  --line:#232a31;
-  --text:#e8ecef;
-  --dim:#8a94a0;
-  --ct:#5b9cf6;
-  --t:#e8a33d;
-  --danger:#e0483e;
-  --accent:#3ddc97;
+  --color-primary:      #FFACBC;
+  --color-primary-soft: rgba(255,172,188,0.10);
+  --color-primary-line: rgba(255,172,188,0.24);
+  --color-accent:       #FFACBC;
+  --color-accent-deep:  #FF869C;
+  --color-accent-glow:  rgba(255,172,188,0.35);
+  --color-text:         #F6F2EC;
+  --color-ink:          #1C1D21;
+  --color-ink-soft:     #A8A398;
+  --color-surface:      #212226;
+  --color-surface-alt:  #292A30;
+
+  --status-upcoming: #8CA0FF;
+  --status-live:     #FF5C6C;
+  --status-finished: #7A7669;
+  --status-mine:     #3ddc97;
+
+  --font-display: 'Raleway', sans-serif;
+  --font-body: 'Raleway', sans-serif;
+
+  --radius: 14px;
+  --container: 880px;
+
+  --shadow-soft: 0 16px 40px rgba(0,0,0,0.45);
+  --shadow-tight: 0 4px 16px rgba(0,0,0,0.35);
+  --shadow-glow: 0 0 0 1px rgba(255,172,188,0.18), 0 12px 30px rgba(255,172,188,0.12);
+
+  --ease: cubic-bezier(.22,1,.36,1);
 }
-*{box-sizing:border-box;}
-html,body{margin:0;padding:0;background:transparent;}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
 body{
-  font-family:'Segoe UI',Arial,sans-serif;
-  color:var(--text);
+  position:relative;
+  margin:0;
+  font-family:var(--font-body);
+  color:var(--color-text);
+  background-color:var(--color-ink);
+  overflow-x:hidden;
   min-height:100vh;
+  -webkit-font-smoothing:antialiased;
 }
-body.stage-bg{background:var(--bg);}
-.wrap{max-width:960px;margin:0 auto;padding:24px;}
+body.stage-bg{
+  background-image:
+    radial-gradient(ellipse 60% 50% at 12% 18%, rgba(255,172,188,0.20), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 88% 12%, rgba(255,134,156,0.16), transparent 60%),
+    radial-gradient(ellipse 65% 55% at 50% 100%, rgba(183,90,105,0.16), transparent 65%),
+    linear-gradient(160deg, #1a1620 0%, #1C1D21 45%, #201a22 100%);
+}
+body.obs-mode{ background:transparent !important; }
+::selection{ background:var(--color-accent); color:#1C1D21; }
+img{ max-width:100%; display:block; }
+a{ color:inherit; text-decoration:none; }
+
+@keyframes fadeInUp{ from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+@keyframes popIn{ from{opacity:0;transform:translateY(14px) scale(.98);} to{opacity:1;transform:translateY(0) scale(1);} }
+@keyframes dotPulse{ 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.55;transform:scale(1.35);} }
+@keyframes pulseGlow{ 0%,100%{box-shadow:0 0 0 0 rgba(255,172,188,.35);} 50%{box-shadow:0 0 0 10px rgba(255,172,188,0);} }
+@keyframes spin{ from{transform:rotate(0);} to{transform:rotate(360deg);} }
+
+.wrap{ max-width:var(--container); margin:0 auto; padding:24px; }
+
+/* ---------- header (мини-навбар) ---------- */
+.top-header{
+  display:flex; align-items:center; gap:12px;
+  padding:18px 24px;
+  border-bottom:1px solid var(--color-primary-line);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  background:rgba(28,29,33,0.78);
+  max-width:var(--container); margin:0 auto;
+}
+.top-header .brand-mark{
+  width:38px; height:38px; border-radius:50%;
+  background:var(--color-surface); border:2px solid var(--color-primary);
+  display:flex; align-items:center; justify-content:center; overflow:hidden; flex:none;
+  box-shadow:var(--shadow-tight);
+}
+.top-header .brand-mark img{ width:78%; height:78%; object-fit:contain; }
+.top-header .brand-text{ display:flex; flex-direction:column; line-height:1.2; }
+.top-header .brand-text b{ font-family:var(--font-display); font-weight:900; font-size:16px; letter-spacing:.02em; }
+.top-header .brand-text span{ font-size:11px; color:var(--color-ink-soft); text-transform:uppercase; letter-spacing:.1em; }
+.obs-mode .top-header{ display:none; }
 
 /* ---------- SETUP SCREEN ---------- */
 .setup{
-  max-width:640px;margin:40px auto;background:var(--panel);
-  border:1px solid var(--line);border-radius:14px;padding:32px;
+  max-width:620px; margin:44px auto; padding:34px;
+  background:var(--color-surface); border:1px solid var(--color-primary-line);
+  border-radius:20px; box-shadow:var(--shadow-soft);
+  animation:popIn .5s var(--ease) both;
 }
-.setup h1{
-  font-size:28px;margin:0 0 4px;letter-spacing:.5px;
+.setup .eyebrow{
+  display:inline-block; font-size:12px; font-weight:700; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--color-accent); margin-bottom:8px;
 }
-.setup .sub{color:var(--dim);margin:0 0 28px;font-size:14px;}
-.field{margin-bottom:20px;}
-.field label{display:block;font-size:13px;color:var(--dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
+.setup h1{ font-family:var(--font-display); font-size:26px; font-weight:800; margin:0 0 6px; color:var(--color-text); }
+.setup .sub{ color:var(--color-ink-soft); margin:0 0 28px; font-size:14px; line-height:1.55; }
+
+.field{ margin-bottom:20px; }
+.field label{ display:block; font-size:12.5px; font-weight:700; color:var(--color-ink-soft); margin-bottom:8px; text-transform:uppercase; letter-spacing:.06em; }
 .field input[type=text]{
-  width:100%;padding:12px 14px;background:#181d23;border:1px solid var(--line);
-  border-radius:8px;color:var(--text);font-size:15px;
+  width:100%; padding:12px 14px; border-radius:10px;
+  border:1px solid var(--color-primary-line); background:var(--color-surface-alt);
+  color:var(--color-text); font-family:var(--font-body); font-size:15px;
+  transition:border-color .2s ease, box-shadow .2s ease;
 }
-.field input[type=text]:focus{outline:2px solid var(--accent);border-color:var(--accent);}
-.seg{display:flex;gap:8px;flex-wrap:wrap;}
+.field input[type=text]:focus{ outline:none; border-color:var(--color-primary); box-shadow:0 0 0 3px rgba(255,172,188,.16); }
+
+.seg{ display:flex; gap:8px; flex-wrap:wrap; }
 .seg button{
-  flex:1;min-width:140px;padding:14px 10px;background:#181d23;border:1px solid var(--line);
-  border-radius:8px;color:var(--text);cursor:pointer;font-size:14px;font-weight:600;
-  transition:border-color .15s, background .15s;
+  flex:1; min-width:120px; padding:13px 10px; border-radius:10px;
+  border:1px solid var(--color-primary-line); background:var(--color-surface-alt);
+  color:var(--color-text); cursor:pointer; font-family:var(--font-body); font-weight:700; font-size:13.5px;
+  transition:all .2s var(--ease);
 }
-.seg button:hover{border-color:var(--accent);}
-.seg button.active{background:rgba(61,220,151,.12);border-color:var(--accent);color:var(--accent);}
-.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-.seg .desc{width:100%;font-size:12px;color:var(--dim);margin-top:-6px;margin-bottom:16px;}
-.pool-list{display:flex;flex-wrap:wrap;gap:8px;}
+.seg button:hover{ border-color:var(--color-primary); transform:translateY(-2px); }
+.seg button.active{ background:var(--color-accent); border-color:var(--color-accent); color:#1C1D21; box-shadow:var(--shadow-glow); }
+.seg .desc{ width:100%; font-size:12px; color:var(--color-ink-soft); margin-top:8px; }
+
+.pool-list{ display:flex; flex-wrap:wrap; gap:8px; }
 .pool-chip{
-  padding:8px 14px;background:#181d23;border:1px solid var(--line);border-radius:20px;
-  font-size:13px;cursor:pointer;color:var(--dim);
+  padding:8px 15px; background:var(--color-surface-alt); border:1px solid var(--color-primary-line);
+  border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; color:var(--color-ink-soft);
+  transition:all .2s ease;
 }
-.pool-chip.on{color:var(--text);border-color:var(--accent);background:rgba(61,220,151,.1);}
-.start-btn{
-  width:100%;padding:16px;border:none;border-radius:10px;background:var(--accent);
-  color:#04140c;font-weight:700;font-size:16px;cursor:pointer;margin-top:8px;
-  letter-spacing:.3px;
+.pool-chip.on{ color:var(--color-text); border-color:var(--color-primary); background:var(--color-primary-soft); }
+.pool-chip:hover{ border-color:var(--color-primary); }
+
+.btn{
+  position:relative; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:14px 26px; border-radius:999px; background:var(--color-accent); color:#1C1D21;
+  font-weight:700; font-size:14px; font-family:var(--font-body); border:none; cursor:pointer;
+  box-shadow:var(--shadow-tight); transition:background .25s ease, transform .2s var(--ease), box-shadow .25s ease;
+  width:100%; margin-top:6px;
 }
-.start-btn:disabled{opacity:.4;cursor:not-allowed;}
-.start-btn:hover:not(:disabled){filter:brightness(1.08);}
-.links-box{margin-top:24px;padding:16px;background:#181d23;border-radius:10px;border:1px solid var(--line);font-size:13px;}
-.links-box div{margin-bottom:8px;word-break:break-all;color:var(--dim);}
-.links-box b{color:var(--text);}
-.copy-btn{
-  background:none;border:1px solid var(--line);color:var(--accent);border-radius:6px;
-  padding:4px 10px;font-size:12px;cursor:pointer;margin-left:6px;
+.btn::after{
+  content:""; position:absolute; top:0; left:-60%; width:40%; height:100%;
+  background:linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent);
+  transform:skewX(-20deg); transition:left .5s ease;
+}
+.btn:hover{ background:var(--color-accent-deep); transform:translateY(-2px); box-shadow:var(--shadow-glow); }
+.btn:hover::after{ left:130%; }
+.btn:active{ transform:translateY(0) scale(.98); }
+.btn:disabled{ opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
+.btn.secondary{ background:var(--color-surface-alt); color:var(--color-accent-deep); border:1px solid var(--color-primary-line); width:auto; margin-top:0; padding:9px 16px; font-size:12.5px; }
+.btn.secondary:hover{ background:var(--color-primary-soft); box-shadow:none; color:var(--color-accent); }
+.btn.danger{ background:var(--color-surface-alt); color:var(--status-live); border:1px solid rgba(255,92,108,.35); width:auto; margin-top:0; padding:10px 18px; font-size:12.5px; }
+.btn.danger:hover{ background:rgba(255,92,108,.12); box-shadow:none; }
+
+.links-box{
+  margin-top:24px; padding:18px; background:var(--color-surface-alt); border-radius:14px;
+  border:1px dashed var(--color-primary-line); font-size:13px; animation:popIn .4s var(--ease) both;
+}
+.links-box .lb-row{ margin-bottom:12px; }
+.links-box .lb-row:last-of-type{ margin-bottom:0; }
+.links-box b{ color:var(--color-text); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; }
+.links-box .lb-url{ display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap; }
+.links-box .lb-url span{ color:var(--color-ink-soft); word-break:break-all; font-size:12.5px; }
+.small-note{ font-size:12px; color:var(--color-ink-soft); margin-top:14px; line-height:1.5; }
+
+/* ---------- STAGE ---------- */
+.stage{ max-width:820px; margin:0 auto; padding:32px 24px 60px; }
+.header{ display:flex; justify-content:center; align-items:center; gap:14px; margin-bottom:20px; flex-wrap:wrap; text-align:center; }
+.team-title{ font-family:var(--font-display); font-size:22px; font-weight:800; }
+.team-title.t1{ color:#8CA0FF; }
+.team-title.t2{ color:#FF869C; }
+.vs{
+  font-size:11px; font-weight:700; color:var(--color-accent);
+  padding:3px 12px; border:1px solid var(--color-primary-line); border-radius:999px;
+  text-transform:uppercase; letter-spacing:.08em;
 }
 
-/* ---------- STAGE (captain / admin / obs) ---------- */
-.stage{max-width:1000px;margin:0 auto;padding:20px;}
-.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
-.team-title{font-size:22px;font-weight:800;}
-.team-title.t1{color:var(--ct);}
-.team-title.t2{color:var(--t);}
-.vs{color:var(--dim);font-weight:400;font-size:16px;margin:0 10px;}
 .turn-banner{
-  text-align:center;padding:12px;border-radius:10px;margin-bottom:20px;font-size:15px;
-  font-weight:700;letter-spacing:.3px;background:#181d23;border:1px solid var(--line);
+  text-align:center; padding:13px; border-radius:12px; margin-bottom:22px; font-size:14.5px;
+  font-weight:700; letter-spacing:.02em; background:var(--color-surface); border:1px solid var(--color-primary-line);
 }
-.turn-banner.mine{border-color:var(--accent);color:var(--accent);background:rgba(61,220,151,.08);}
-.turn-banner.theirs{color:var(--dim);}
-.turn-banner.done{color:var(--accent);border-color:var(--accent);}
+.turn-banner.mine{ border-color:var(--status-mine); color:var(--status-mine); background:rgba(61,220,151,.08); }
+.turn-banner.theirs{ color:var(--color-ink-soft); }
+.turn-banner.done{ color:var(--color-accent); border-color:var(--color-accent); background:var(--color-primary-soft); }
 
-.maps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+.maps-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:14px; }
 .map-card{
-  position:relative;border-radius:10px;overflow:hidden;border:2px solid var(--line);
-  aspect-ratio:16/10;cursor:pointer;background:#181d23;
+  position:relative; border-radius:14px; overflow:hidden; border:2px solid var(--color-primary-line);
+  aspect-ratio:16/10; cursor:pointer; background:var(--color-surface-alt);
+  box-shadow:var(--shadow-tight); transition:transform .3s var(--ease), border-color .3s var(--ease), box-shadow .3s var(--ease);
 }
-.map-card img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(.55);}
+.map-card img{ width:100%; height:100%; object-fit:cover; display:block; filter:brightness(.55); transition:filter .3s ease; }
 .map-card .name{
-  position:absolute;bottom:0;left:0;right:0;padding:10px;font-weight:700;font-size:15px;
-  background:linear-gradient(transparent,rgba(0,0,0,.75));
+  position:absolute; bottom:0; left:0; right:0; padding:10px; font-weight:800; font-size:14px;
+  font-family:var(--font-display); background:linear-gradient(transparent,rgba(0,0,0,.78));
 }
-.map-card:not(.disabled):hover{border-color:var(--accent);}
-.map-card:not(.disabled):hover img{filter:brightness(.7);}
-.map-card.disabled{cursor:default;}
-.map-card.banned{border-color:var(--danger);}
-.map-card.banned img{filter:brightness(.25) grayscale(1);}
-.map-card.picked{border-color:var(--accent);}
-.map-card.picked img{filter:brightness(.8);}
+.map-card:not(.disabled):hover{ border-color:var(--color-accent); transform:translateY(-4px); box-shadow:var(--shadow-glow); }
+.map-card:not(.disabled):hover img{ filter:brightness(.72); }
+.map-card.disabled{ cursor:default; }
+.map-card.banned{ border-color:var(--status-live); }
+.map-card.banned img{ filter:brightness(.22) grayscale(1); }
+.map-card.picked{ border-color:var(--status-mine); box-shadow:0 0 0 1px rgba(61,220,151,.25); }
+.map-card.picked img{ filter:brightness(.82); }
+
 .tag{
-  position:absolute;top:8px;right:8px;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:800;
-  letter-spacing:.5px;text-transform:uppercase;
+  position:absolute; top:8px; right:8px; padding:3px 9px; border-radius:6px; font-size:10.5px; font-weight:800;
+  letter-spacing:.05em; text-transform:uppercase;
 }
-.tag.ban{background:var(--danger);color:#fff;}
-.tag.pick{background:var(--accent);color:#04140c;}
-.tag.byteam{position:absolute;top:8px;left:8px;font-size:10px;padding:3px 8px;border-radius:5px;font-weight:700;background:rgba(0,0,0,.55);}
+.tag.ban{ background:var(--status-live); color:#fff; }
+.tag.pick{ background:var(--status-mine); color:#04140c; }
+.tag.byteam{ position:absolute; top:8px; left:8px; font-size:10px; padding:3px 8px; border-radius:6px; font-weight:700; background:rgba(0,0,0,.55); }
 
-.log{margin-top:24px;}
-.log h3{font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.log{ margin-top:30px; }
+.log h3{ font-family:var(--font-display); font-size:12px; color:var(--color-ink-soft); text-transform:uppercase; letter-spacing:.1em; margin-bottom:12px; font-weight:800; }
 .log-row{
-  display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--panel);
-  border:1px solid var(--line);border-radius:8px;margin-bottom:6px;font-size:14px;
+  display:flex; align-items:center; gap:10px; padding:11px 14px; background:var(--color-surface);
+  border:1px solid var(--color-primary-line); border-radius:10px; margin-bottom:8px; font-size:13.5px;
+  animation:fadeInUp .35s var(--ease) both;
 }
-.log-row .badge{
-  font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;text-transform:uppercase;
-}
-.log-row .badge.ban{background:var(--danger);color:#fff;}
-.log-row .badge.pick{background:var(--accent);color:#04140c;}
-.log-row .who{color:var(--dim);font-size:12px;}
+.log-row .badge{ font-size:10px; font-weight:800; padding:3px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:.03em; }
+.log-row .badge.ban{ background:var(--status-live); color:#fff; }
+.log-row .badge.pick{ background:var(--status-mine); color:#04140c; }
+.log-row .who{ color:var(--color-ink-soft); font-size:12px; margin-left:auto; }
 
-.admin-bar{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
-.admin-bar button{
-  background:#181d23;border:1px solid var(--line);color:var(--dim);padding:8px 14px;
-  border-radius:8px;font-size:12px;cursor:pointer;
-}
-.admin-bar button:hover{color:var(--danger);border-color:var(--danger);}
+.admin-bar{ display:flex; justify-content:flex-end; gap:10px; margin-top:24px; }
 
 /* ---------- OBS OVERLAY ---------- */
-.obs-wrap{padding:0;max-width:none;}
-.obs-header{display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 0;}
-.obs-header .team-title{font-size:26px;text-shadow:0 2px 6px rgba(0,0,0,.6);}
-.obs-strip{display:flex;gap:10px;padding:0 20px 20px;}
+.obs-wrap{ padding:0; max-width:none; }
+.obs-header{ display:flex; align-items:center; justify-content:center; gap:18px; padding:18px 0; }
+.obs-header .team-title{ font-size:27px; text-shadow:0 2px 8px rgba(0,0,0,.7); }
+.obs-strip{ display:flex; gap:12px; padding:0 24px 24px; }
 .obs-map{
-  flex:1;position:relative;border-radius:8px;overflow:hidden;aspect-ratio:16/10;
-  border:2px solid var(--line);background:#0d1013;
+  flex:1; position:relative; border-radius:12px; overflow:hidden; aspect-ratio:16/10;
+  border:2px solid var(--color-primary-line); background:#151519;
 }
-.obs-map img{width:100%;height:100%;object-fit:cover;display:block;}
-.obs-map.banned img{filter:brightness(.25) grayscale(1);}
-.obs-map.picked img{filter:brightness(.85);}
-.obs-map.pending img{filter:brightness(.5);}
+.obs-map img{ width:100%; height:100%; object-fit:cover; display:block; }
+.obs-map.banned img{ filter:brightness(.22) grayscale(1); }
+.obs-map.picked img{ filter:brightness(.88); }
+.obs-map.pending img{ filter:brightness(.48); }
 .obs-map .name{
-  position:absolute;bottom:0;left:0;right:0;padding:8px;font-weight:800;font-size:13px;
-  text-align:center;background:linear-gradient(transparent,rgba(0,0,0,.8));text-shadow:0 1px 3px #000;
+  position:absolute; bottom:0; left:0; right:0; padding:9px; font-weight:800; font-size:12.5px;
+  font-family:var(--font-display); text-align:center; background:linear-gradient(transparent,rgba(0,0,0,.85)); text-shadow:0 1px 4px #000;
 }
-.obs-map .tag{font-size:9px;padding:2px 7px;}
-.obs-final-banner{
-  text-align:center;padding:10px;color:var(--dim);font-size:13px;letter-spacing:.3px;
+.obs-map .tag{ font-size:9px; padding:3px 8px; }
+.obs-final-banner{ text-align:center; padding:12px; color:var(--color-ink-soft); font-size:13px; letter-spacing:.04em; font-weight:600; }
+
+/* ---------- misc states ---------- */
+.status-banner{
+  display:flex; gap:14px; align-items:flex-start; padding:20px; border-radius:16px; margin:44px auto; max-width:520px;
+  border:1px solid var(--color-primary-line); background:var(--color-surface); text-align:left;
 }
-.hidden{display:none !important;}
-.small-note{font-size:12px;color:var(--dim);margin-top:6px;}
+.status-banner .ic{
+  width:38px; height:38px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+  background:var(--color-primary-soft); font-size:18px;
+}
+.status-banner.pending .ic{ animation:spin 2.2s linear infinite; }
+.status-banner h4{ margin:0 0 4px; font-size:15px; font-family:var(--font-display); }
+.status-banner p{ margin:0; font-size:13.5px; color:var(--color-ink-soft); line-height:1.55; }
+
+.hidden{ display:none !important; }
+
+.footer-note{
+  text-align:center; padding:24px; color:var(--color-ink-soft); font-size:12px; letter-spacing:.03em;
+}
+.footer-note b{ color:var(--color-accent); }
+
+@media (max-width:560px){
+  .top-header{ padding:14px 18px; }
+  .stage{ padding:24px 16px 44px; }
+}
 </style>
 </head>
 <body>
@@ -162,7 +283,7 @@ body.stage-bg{background:var(--bg);}
 <div id="app"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 (function(){
 
@@ -177,17 +298,7 @@ const MAP_POOL_ACTIVE = [
   {id:"train",    name:"Train",     img:"https://static.wikia.nocookie.net/cswikia/images/0/0c/Cs2_train.png"}
 ];
 
-function fallbackImg(name){
-  // simple colored placeholder generator (no network dependency)
-  const colors = {mirage:"#c9a86a",inferno:"#c0523f",nuke:"#5f8f8f",ancient:"#5c7a4e",anubis:"#c9b45c",dust2:"#c9a35a",train:"#5c6b7a"};
-  return null;
-}
-
-// ---------- Firebase setup ----------
-// 1. Go to https://console.firebase.google.com -> Add project (free, no credit card).
-// 2. In the project, open "Build" -> "Realtime Database" -> "Create Database" -> start in TEST MODE.
-// 3. Go to Project settings (gear icon) -> General -> "Your apps" -> Web app (</>) -> register app.
-// 4. Copy the firebaseConfig object it gives you and paste it below, replacing the placeholder.
+// ---------- Firebase (проект уже настроен, тариф Spark / бесплатный) ----------
 const firebaseConfig = {
   apiKey: "AIzaSyBvvLgJ27RISZso_wS5fPZDJXJ48sxCPTs",
   authDomain: "map-veto-5f48f.firebaseapp.com",
@@ -197,66 +308,44 @@ const firebaseConfig = {
   appId: "1:1085848048709:web:a33c5f44d7494604c33f2c",
   measurementId: "G-095414VLL6"
 };
-const FIREBASE_CONFIGURED = firebaseConfig.apiKey !== "AIzaSyBvvLgJ27RISZso_wS5fPZDJXJ48sxCPTs";
-
-let dbRef = null;
-if(FIREBASE_CONFIGURED && window.firebase){
-  firebase.initializeApp(firebaseConfig);
-}
+firebase.initializeApp(firebaseConfig);
+// Firestore вместо Realtime Database — не требует отдельного databaseURL
+// и укладывается в бесплатный лимит Spark-тарифа (50k чтений / 20k записей в день,
+// более чем достаточно для матчей вето).
+const db = firebase.firestore();
 
 // ---------- State helpers ----------
 const params = new URLSearchParams(location.search);
 const role = params.get('role'); // 'team1' | 'team2' | 'obs' | null(admin/setup)
-const matchId = params.get('m') || 'default';
+const matchId = (params.get('m') || 'default').replace(/[^a-zA-Z0-9_-]/g,'') || 'default';
 
 let state = null;
+let unsub = null;
 
-function getRef(){
-  if(!dbRef){
-    dbRef = firebase.database().ref('veto/' + matchId);
-  }
-  return dbRef;
+function getDocRef(){
+  return db.collection('vetoMatches').doc(matchId);
 }
-
 async function loadState(){
-  if(!FIREBASE_CONFIGURED) return null;
   try{
-    const snap = await getRef().once('value');
-    return snap.exists() ? snap.val() : null;
+    const snap = await getDocRef().get();
+    return snap.exists ? snap.data() : null;
   }catch(e){ console.error(e); return null; }
 }
 async function saveState(s){
-  if(!FIREBASE_CONFIGURED) return;
-  try{
-    await getRef().set(s);
-  }catch(e){ console.error('save failed', e); }
+  try{ await getDocRef().set(s); }catch(e){ console.error('save failed', e); alert('Не удалось сохранить: '+e.message); }
 }
 async function deleteState(){
-  if(!FIREBASE_CONFIGURED) return;
-  try{ await getRef().remove(); }catch(e){}
+  try{ await getDocRef().delete(); }catch(e){}
 }
 
 const FORMATS = {
-  bo1:{
-    label:"BO1",
-    sequence:["ban","ban","ban","ban","ban","ban","pick"], // last remaining map = decider auto-pick
-    desc:"7 карт — 6 банов по очереди, последняя карта остаётся."
-  },
-  bo3:{
-    label:"BO3",
-    sequence:["ban","ban","pick","pick","ban","ban","pick"],
-    desc:"Бан-бан-пик-пик-бан-бан, последняя — decider."
-  },
-  bo5:{
-    label:"BO5",
-    sequence:["ban","ban","pick","pick","pick","pick","ban","ban"],
-    desc:"Бан-бан-пик-пик-пик-пик-бан-бан (для 8 карт), для 7 карт последний бан пропускается автоматически."
-  }
+  bo1:{ label:"BO1", sequence:["ban","ban","ban","ban","ban","ban","pick"], desc:"7 карт — 6 банов по очереди, последняя карта остаётся." },
+  bo3:{ label:"BO3", sequence:["ban","ban","pick","pick","ban","ban","pick"], desc:"Бан-бан-пик-пик-бан-бан, последняя — decider." },
+  bo5:{ label:"BO5", sequence:["ban","ban","pick","pick","pick","pick","ban","ban"], desc:"Бан-бан-пик-пик-пик-пик-бан-бан, для 7 карт последний бан пропускается." }
 };
 
 function seqForFormat(fmt, totalMaps){
   let seq = FORMATS[fmt].sequence.slice();
-  // trim/adjust sequence length to available maps - 1 action per map, last map auto-decided
   while(seq.length > totalMaps - 1){ seq.pop(); }
   while(seq.length < totalMaps - 1){ seq.push(seq[seq.length%2===0?0:1] || "ban"); }
   return seq;
@@ -264,60 +353,53 @@ function seqForFormat(fmt, totalMaps){
 
 function render(){
   const app = document.getElementById('app');
-
-  if(!FIREBASE_CONFIGURED && (role === 'team1' || role === 'team2' || role === 'obs')){
-    app.innerHTML = `<div class="wrap"><div class="setup" style="text-align:center;">
-      <h1>Сайт ещё не настроен</h1>
-      <p class="sub">Администратор ещё не завершил настройку Firebase. Сообщите ему об этом и попробуйте позже.</p>
-    </div></div>`;
-    return;
-  }
-
-  if(!state && role !== null || (!state && !role)){
-    // no match yet -> show setup (only reachable without role, or role present but no state -> show waiting)
-  }
+  document.body.classList.remove('obs-mode');
 
   if(!state && (role === 'team1' || role === 'team2' || role === 'obs')){
-    app.innerHTML = `<div class="wrap"><div class="setup" style="text-align:center;">
-      <h1>Ожидание</h1>
-      <p class="sub">Матч ещё не создан администратором. Обновите страницу через минуту.</p>
-    </div></div>`;
+    if(role === 'obs') document.body.classList.add('obs-mode');
+    document.body.classList.add('stage-bg');
+    app.innerHTML = headerHtml() + `
+      <div class="status-banner pending">
+        <div class="ic">⏳</div>
+        <div><h4>Ожидание</h4><p>Матч ещё не создан администратором. Обновите страницу через минуту.</p></div>
+      </div>`;
     return;
   }
 
-  if(!state){
-    renderSetup();
-    return;
-  }
+  if(!state){ renderSetup(); return; }
 
   if(role === 'obs'){ renderObs(); return; }
   if(role === 'team1' || role === 'team2'){ renderCaptain(role); return; }
   renderAdmin();
 }
 
+function headerHtml(){
+  return `<div class="top-header">
+    <div class="brand-mark"><img src="favicon.png" alt="logo"></div>
+    <div class="brand-text"><b>MAP VETO</b><span>CS2 Tournament Tool</span></div>
+  </div>`;
+}
+
 // ---------- SETUP ----------
-let setupData = {
-  team1:"Команда 1", team2:"Команда 2",
-  format:"bo3",
-  pool: MAP_POOL_ACTIVE.map(m=>m.id)
-};
+let setupData = { team1:"Команда 1", team2:"Команда 2", format:"bo3", pool: MAP_POOL_ACTIVE.map(m=>m.id) };
 
 function renderSetup(){
-  document.body.classList.remove('stage-bg');
+  document.body.classList.add('stage-bg');
   const app = document.getElementById('app');
-  app.innerHTML = `
+  app.innerHTML = headerHtml() + `
   <div class="wrap">
     <div class="setup">
+      <span class="eyebrow">Админ-панель</span>
       <h1>Настройка Map Veto</h1>
       <p class="sub">Создайте матч и отправьте капитанам их персональные ссылки.</p>
 
       <div class="field">
         <label>Название команды 1</label>
-        <input type="text" id="in-team1" value="${setupData.team1}">
+        <input type="text" id="in-team1" value="${escapeHtml(setupData.team1)}">
       </div>
       <div class="field">
         <label>Название команды 2</label>
-        <input type="text" id="in-team2" value="${setupData.team2}">
+        <input type="text" id="in-team2" value="${escapeHtml(setupData.team2)}">
       </div>
 
       <div class="field">
@@ -335,11 +417,10 @@ function renderSetup(){
         <div class="pool-list" id="pool-list"></div>
       </div>
 
-      <button class="start-btn" id="start-btn">Создать матч</button>
-
+      <button class="btn" id="start-btn">Создать матч</button>
       <div id="links-box"></div>
     </div>
-  </div>`;
+  </div>` + footerNote();
 
   renderPoolChips();
 
@@ -366,11 +447,8 @@ function renderPoolChips(){
     chip.className = 'pool-chip' + (setupData.pool.includes(m.id) ? ' on' : '');
     chip.textContent = m.name;
     chip.onclick = ()=>{
-      if(setupData.pool.includes(m.id)){
-        setupData.pool = setupData.pool.filter(x=>x!==m.id);
-      } else {
-        setupData.pool.push(m.id);
-      }
+      if(setupData.pool.includes(m.id)){ setupData.pool = setupData.pool.filter(x=>x!==m.id); }
+      else{ setupData.pool.push(m.id); }
       renderPoolChips();
     };
     box.appendChild(chip);
@@ -378,14 +456,7 @@ function renderPoolChips(){
 }
 
 async function createMatch(){
-  if(!FIREBASE_CONFIGURED){
-    alert('Firebase ещё не настроен. Откройте файл сайта и вставьте свой firebaseConfig (см. комментарий в начале скрипта).');
-    return;
-  }
-  if(setupData.pool.length < 3){
-    alert('Выберите минимум 3 карты в пуле.');
-    return;
-  }
+  if(setupData.pool.length < 3){ alert('Выберите минимум 3 карты в пуле.'); return; }
   const startBtn = document.getElementById('start-btn');
   startBtn.disabled = true;
   startBtn.textContent = 'Создаём матч…';
@@ -393,18 +464,14 @@ async function createMatch(){
   const maps = MAP_POOL_ACTIVE.filter(m=>setupData.pool.includes(m.id));
   const seq = seqForFormat(setupData.format, maps.length);
   const newState = {
-    team1: setupData.team1,
-    team2: setupData.team2,
-    format: setupData.format,
-    maps: maps,
-    sequence: seq, // array of "ban"/"pick", actor alternates team1,team2,team1...
-    actions: [], // {mapId, type, by}
-    remaining: maps.map(m=>m.id),
-    finished: false
+    team1: setupData.team1, team2: setupData.team2, format: setupData.format,
+    maps: maps, sequence: seq, actions: [], remaining: maps.map(m=>m.id), finished: false
   };
   await saveState(newState);
   state = newState;
+  startBtn.textContent = 'Матч создан';
   showLinks();
+  startListening();
 }
 
 function showLinks(){
@@ -416,24 +483,25 @@ function showLinks(){
   const box = document.getElementById('links-box');
   box.innerHTML = `
   <div class="links-box">
-    <div><b>Капитан ${state.team1}:</b><br>${l1} <button class="copy-btn" onclick="navigator.clipboard.writeText('${l1}')">Копировать</button></div>
-    <div><b>Капитан ${state.team2}:</b><br>${l2} <button class="copy-btn" onclick="navigator.clipboard.writeText('${l2}')">Копировать</button></div>
-    <div><b>OBS оверлей (Browser Source):</b><br>${l3} <button class="copy-btn" onclick="navigator.clipboard.writeText('${l3}')">Копировать</button></div>
+    ${linkRow('Капитан ' + state.team1, l1)}
+    ${linkRow('Капитан ' + state.team2, l2)}
+    ${linkRow('OBS оверлей (Browser Source)', l3)}
     <div class="small-note">Матч создан. Отправьте капитанам их ссылки, а ссылку OBS добавьте в OBS как Browser Source.</div>
   </div>`;
 }
+function linkRow(label, url){
+  return `<div class="lb-row"><b>${escapeHtml(label)}</b>
+    <div class="lb-url"><span>${escapeHtml(url)}</span>
+    <button class="btn secondary" onclick="navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}');this.textContent='Скопировано ✓';setTimeout(()=>this.textContent='Копировать',1400)">Копировать</button></div></div>`;
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function footerNote(){ return `<div class="footer-note">Работает на <b>Map Veto</b> · Firestore realtime</div>`; }
 
 // ---------- Turn logic ----------
 function currentActionIndex(){ return state.actions.length; }
 function isFinished(){ return currentActionIndex() >= state.sequence.length || state.remaining.length <= 1; }
-function actingTeam(){
-  // team1 acts on even index (0,2,4...), team2 on odd
-  return currentActionIndex() % 2 === 0 ? 'team1' : 'team2';
-}
-function currentActionType(){
-  const i = currentActionIndex();
-  return state.sequence[i] || 'pick';
-}
+function actingTeam(){ return currentActionIndex() % 2 === 0 ? 'team1' : 'team2'; }
+function currentActionType(){ const i = currentActionIndex(); return state.sequence[i] || 'pick'; }
 
 async function performAction(mapId){
   if(isFinished()) return;
@@ -449,10 +517,7 @@ async function performAction(mapId){
   render();
 }
 
-function mapStatus(mapId){
-  const act = state.actions.find(a=>a.mapId===mapId);
-  return act || null;
-}
+function mapStatus(mapId){ return state.actions.find(a=>a.mapId===mapId) || null; }
 
 // ---------- CAPTAIN VIEW ----------
 function renderCaptain(myRole){
@@ -463,20 +528,16 @@ function renderCaptain(myRole){
   const myTurn = !isFinished() && actingTeam() === myRole;
 
   let banner;
-  if(state.finished){
-    banner = `<div class="turn-banner done">Вето завершено</div>`;
-  } else if(myTurn){
-    banner = `<div class="turn-banner mine">Ваш ход: ${currentActionType()==='ban' ? 'забаньте карту' : 'выберите карту'}</div>`;
-  } else {
-    banner = `<div class="turn-banner theirs">Ход соперника (${otherTeamName})…</div>`;
-  }
+  if(state.finished){ banner = `<div class="turn-banner done">Вето завершено</div>`; }
+  else if(myTurn){ banner = `<div class="turn-banner mine">Ваш ход: ${currentActionType()==='ban' ? 'забаньте карту' : 'выберите карту'}</div>`; }
+  else{ banner = `<div class="turn-banner theirs">Ход соперника (${escapeHtml(otherTeamName)})…</div>`; }
 
-  app.innerHTML = `
+  app.innerHTML = headerHtml() + `
   <div class="stage">
     <div class="header">
-      <div class="team-title ${myRole==='team1'?'t1':'t2'}">${myTeamName}</div>
-      <div class="vs">vs</div>
-      <div class="team-title ${myRole==='team1'?'t2':'t1'}" style="opacity:.6">${otherTeamName}</div>
+      <div class="team-title ${myRole==='team1'?'t1':'t2'}">${escapeHtml(myTeamName)}</div>
+      <div class="vs">VS</div>
+      <div class="team-title ${myRole==='team1'?'t2':'t1'}" style="opacity:.55">${escapeHtml(otherTeamName)}</div>
     </div>
     ${banner}
     <div class="maps-grid" id="grid"></div>
@@ -493,9 +554,7 @@ function renderCaptain(myRole){
       <img src="${m.img}" alt="${m.name}" onerror="this.style.opacity=0.15">
       ${st ? `<div class="tag ${st.type==='ban'?'ban':'pick'}">${st.type==='ban'?'Бан':(st.type==='decider'?'Decider':'Пик')}</div>` : ''}
       <div class="name">${m.name}</div>`;
-    if(!disabled){
-      card.onclick = ()=> performAction(m.id);
-    }
+    if(!disabled){ card.onclick = ()=> performAction(m.id); }
     grid.appendChild(card);
   });
 
@@ -511,30 +570,29 @@ function renderLog(){
     const teamName = a.by==='team1' ? state.team1 : (a.by==='team2' ? state.team2 : 'Авто');
     const badge = a.type==='ban' ? 'ban' : 'pick';
     const label = a.type==='ban' ? 'Бан' : (a.type==='decider'?'Decider':'Пик');
-    return `<div class="log-row"><span class="badge ${badge}">${label}</span> ${map ? map.name : a.mapId} <span class="who">— ${teamName}</span></div>`;
+    return `<div class="log-row"><span class="badge ${badge}">${label}</span> ${map ? map.name : a.mapId} <span class="who">${escapeHtml(teamName)}</span></div>`;
   }).join('');
 }
 
-// ---------- ADMIN VIEW (fallback, no role param but state exists) ----------
+// ---------- ADMIN VIEW ----------
 function renderAdmin(){
   document.body.classList.add('stage-bg');
   const app = document.getElementById('app');
-  const myTurn = !isFinished();
   let banner = state.finished
     ? `<div class="turn-banner done">Вето завершено</div>`
-    : `<div class="turn-banner">Сейчас ходит: ${actingTeam()==='team1'?state.team1:state.team2} — ${currentActionType()==='ban'?'бан':'пик'}</div>`;
+    : `<div class="turn-banner">Сейчас ходит: ${escapeHtml(actingTeam()==='team1'?state.team1:state.team2)} — ${currentActionType()==='ban'?'бан':'пик'}</div>`;
 
-  app.innerHTML = `
+  app.innerHTML = headerHtml() + `
   <div class="stage">
     <div class="header">
-      <div class="team-title t1">${state.team1}</div>
-      <div class="vs">vs</div>
-      <div class="team-title t2">${state.team2}</div>
+      <div class="team-title t1">${escapeHtml(state.team1)}</div>
+      <div class="vs">VS</div>
+      <div class="team-title t2">${escapeHtml(state.team2)}</div>
     </div>
     ${banner}
     <div class="maps-grid" id="grid"></div>
     <div class="log" id="log"></div>
-    <div class="admin-bar"><button id="reset-btn">Сбросить матч</button></div>
+    <div class="admin-bar"><button class="btn danger" id="reset-btn">Сбросить матч</button></div>
     <div id="links-box"></div>
   </div>`;
 
@@ -555,6 +613,7 @@ function renderAdmin(){
 
   document.getElementById('reset-btn').onclick = async ()=>{
     if(confirm('Точно сбросить текущий матч и создать новый?')){
+      if(unsub){ unsub(); unsub=null; }
       await deleteState();
       state = null;
       render();
@@ -564,14 +623,14 @@ function renderAdmin(){
 
 // ---------- OBS OVERLAY ----------
 function renderObs(){
-  document.body.classList.remove('stage-bg'); // transparent bg for OBS
+  document.body.classList.add('obs-mode');
   const app = document.getElementById('app');
   app.innerHTML = `
   <div class="wrap obs-wrap">
     <div class="obs-header">
-      <div class="team-title t1">${state.team1}</div>
-      <div class="vs">vs</div>
-      <div class="team-title t2">${state.team2}</div>
+      <div class="team-title t1">${escapeHtml(state.team1)}</div>
+      <div class="vs">VS</div>
+      <div class="team-title t2">${escapeHtml(state.team2)}</div>
     </div>
     <div class="obs-strip" id="obs-strip"></div>
     <div class="obs-final-banner" id="obs-banner"></div>
@@ -590,30 +649,24 @@ function renderObs(){
   });
 
   const banner = document.getElementById('obs-banner');
-  if(state.finished){
-    banner.textContent = 'Вето завершено';
-  } else {
-    banner.textContent = `Ход: ${actingTeam()==='team1'?state.team1:state.team2} — ${currentActionType()==='ban'?'бан':'пик'}`;
-  }
+  banner.textContent = state.finished
+    ? 'Вето завершено'
+    : `Ход: ${actingTeam()==='team1'?state.team1:state.team2} — ${currentActionType()==='ban'?'бан':'пик'}`;
 }
 
 // ---------- Realtime updates ----------
 function startListening(){
-  if(!FIREBASE_CONFIGURED) return;
-  getRef().on('value', (snap)=>{
-    const fresh = snap.exists() ? snap.val() : null;
+  if(unsub) return;
+  unsub = getDocRef().onSnapshot((snap)=>{
+    const fresh = snap.exists ? snap.data() : null;
     if(JSON.stringify(fresh) !== JSON.stringify(state)){
       state = fresh;
       render();
     }
-  });
+  }, (err)=>console.error('snapshot error', err));
 }
 
 (async function init(){
-  if(!FIREBASE_CONFIGURED){
-    render(); // will fall through to setup screen; createMatch() will alert the user
-    return;
-  }
   state = await loadState();
   render();
   startListening();

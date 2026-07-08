@@ -266,7 +266,9 @@ a{ color:inherit; text-decoration:none; }
 .log-row .badge.pick::before{ content:"✓"; }
 .log-row .who{ color:var(--color-ink-soft); font-size:12px; margin-left:auto; }
 
-.admin-bar{ display:flex; justify-content:flex-end; gap:10px; margin-top:24px; }
+.admin-bar{ display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; margin-top:24px; }
+.turn-banner .hint{ opacity:.65; font-weight:600; font-size:12.5px; text-transform:none; letter-spacing:0; }
+.btn[disabled]{ opacity:.4; cursor:not-allowed; pointer-events:none; }
 
 /* ---------- OBS OVERLAY (auto-centers to whatever Browser Source size you use; tuned for 1080p) ---------- */
 .obs-mode .wrap{ max-width:none; }
@@ -388,10 +390,10 @@ a{ color:inherit; text-decoration:none; }
 const MAP_POOL_ACTIVE = [
   {id:"dust2",    name:"Dust II",   img:"https://upload.wikimedia.org/wikipedia/ru/6/6f/Dust_II_%28CS-GO%29.jpg"},
   {id:"mirage",   name:"Mirage",    img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3FHWZ_0x7s6Gzn1FGOZHP10_OFy3LUwgfKyyvIVZeiD93sUYVKmm6I7b-&s=10"},
-  {id:"nuke",     name:"Nuke",      img:"https://static.wikia.nocookie.net/counterstrike/images/5/5e/Cs2nuke.jpg/revision/latest?cb=20230323193535&path-prefix=ru"},
+  {id:"nuke",     name:"Nuke",      img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-8r8aZq1XzQIvbY_mcdcIR6WEi8yeboKSISPdLN7e07QfKn-7DXkZ5dui&s=10"},
   {id:"ancient",  name:"Ancient",   img:"https://game-rezone.com/wp-content/uploads/2024/09/de_ancient_cs2.webp"},
-  {id:"inferno",  name:"Inferno",   img:"https://upload.wikimedia.org/wikipedia/ru/6/65/Inferno_%28CSGO%29.png"},
-  {id:"anubis",   name:"Anubis",    img:"https://rus.egw.news/_next/image?url=https%3A%2F%2Fegw.news%2Fuploads%2Fnews%2F1691150500082-16x9.webp&w=1920&q=75"},
+  {id:"inferno",  name:"Inferno",   img:"https://cs-config.com/_nw/8/46641655.jpg"},
+  {id:"anubis",   name:"Anubis",    img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJWc5hWW4OrKu2tsobFadGf1iq-82pRQoFwD7Bln8JIztuW0SDs1kmQRzb&s=10"},
   {id:"cache",    name:"Cache",     img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSmu7vUAg6iS3PK1U0ja4YyPX-Odn3Csv0Z1OFpUjHIBQt20TZ1-Rl_j8Zh&s=10"}
 ];
 
@@ -482,7 +484,7 @@ function headerHtml(){
 }
 
 // ---------- SETUP ----------
-let setupData = { team1:"Команда 1", team2:"Команда 2", format:"bo3", pool: MAP_POOL_ACTIVE.map(m=>m.id) };
+let setupData = { team1:"Команда 1", team2:"Команда 2", format:"bo3", pool: MAP_POOL_ACTIVE.map(m=>m.id), faceitUrl:"" };
 
 function renderSetup(){
   document.body.classList.add('stage-bg');
@@ -518,6 +520,12 @@ function renderSetup(){
         <div class="pool-list" id="pool-list"></div>
       </div>
 
+      <div class="field">
+        <label>Ссылка на матч FACEIT (необязательно)</label>
+        <input type="text" id="in-faceit" placeholder="https://www.faceit.com/ru/cs2/room/..." value="${escapeHtml(setupData.faceitUrl)}">
+        <div class="desc">Покажется кнопкой в админ-панели и на OBS-оверлее — вы вручную переносите баны/пики с матча на FACEIT сюда, чтобы красиво показать их на стриме.</div>
+      </div>
+
       <button class="btn" id="start-btn">Создать матч</button>
       <div id="links-box"></div>
     </div>
@@ -527,6 +535,7 @@ function renderSetup(){
 
   document.getElementById('in-team1').oninput = e=> setupData.team1 = e.target.value || "Команда 1";
   document.getElementById('in-team2').oninput = e=> setupData.team2 = e.target.value || "Команда 2";
+  document.getElementById('in-faceit').oninput = e=> setupData.faceitUrl = e.target.value.trim();
 
   document.getElementById('fmt-seg').querySelectorAll('button').forEach(b=>{
     b.onclick = ()=>{
@@ -566,7 +575,8 @@ async function createMatch(){
   const seq = seqForFormat(setupData.format, maps.length);
   const newState = {
     team1: setupData.team1, team2: setupData.team2, format: setupData.format,
-    maps: maps, sequence: seq, actions: [], remaining: maps.map(m=>m.id), finished: false
+    maps: maps, sequence: seq, actions: [], remaining: maps.map(m=>m.id), finished: false,
+    faceitUrl: setupData.faceitUrl || ""
   };
   await saveState(newState);
   state = newState;
@@ -619,6 +629,17 @@ async function performAction(mapId){
 }
 
 function mapStatus(mapId){ return state.actions.find(a=>a.mapId===mapId) || null; }
+
+async function undoLastAction(){
+  if(!state.actions.length) return;
+  const removed = [state.actions.pop()];
+  // an auto "decider" action is always paired with the manual action right before it — undo both together
+  if(removed[0].type === 'decider' && state.actions.length){ removed.push(state.actions.pop()); }
+  removed.forEach(a=>{ if(!state.remaining.includes(a.mapId)) state.remaining.push(a.mapId); });
+  state.finished = false;
+  await saveState(state);
+  render();
+}
 
 // ---------- CAPTAIN VIEW ----------
 function renderCaptain(myRole){
@@ -685,7 +706,10 @@ function renderAdmin(){
   const adminIsBan = currentActionType()==='ban';
   let banner = state.finished
     ? `<div class="turn-banner done">🏆 Вето завершено</div>`
-    : `<div class="turn-banner ${adminIsBan?'act-ban':'act-pick'}">Сейчас ходит: ${escapeHtml(actingTeam()==='team1'?state.team1:state.team2)} — ${adminIsBan?'✕ бан':'✓ пик'}</div>`;
+    : `<div class="turn-banner ${adminIsBan?'act-ban':'act-pick'}">Ход: ${escapeHtml(actingTeam()==='team1'?state.team1:state.team2)} — ${adminIsBan?'✕ бан':'✓ пик'} <span class="hint">· кликните карту, чтобы выполнить действие самому</span></div>`;
+
+  const faceitBtn = state.faceitUrl
+    ? `<a class="btn secondary" href="${escapeHtml(state.faceitUrl)}" target="_blank" rel="noopener">Открыть матч на FACEIT ↗</a>` : '';
 
   app.innerHTML = headerHtml() + `
   <div class="stage">
@@ -697,25 +721,32 @@ function renderAdmin(){
     ${banner}
     <div class="maps-grid" id="grid"></div>
     <div class="log" id="log"></div>
-    <div class="admin-bar"><button class="btn danger" id="reset-btn">Сбросить матч</button></div>
+    <div class="admin-bar">
+      ${faceitBtn}
+      <button class="btn secondary" id="undo-btn" ${state.actions.length?'':'disabled'}>Отменить последнее действие</button>
+      <button class="btn danger" id="reset-btn">Сбросить матч</button>
+    </div>
     <div id="links-box"></div>
   </div>`;
 
   const grid = document.getElementById('grid');
   state.maps.forEach(m=>{
     const st = mapStatus(m.id);
+    const disabled = !!st || state.finished;
     const card = document.createElement('div');
-    card.className = 'map-card disabled' + (st ? (st.type==='ban'?' banned':' picked') : '');
+    card.className = 'map-card' + (st ? (st.type==='ban'?' banned':' picked') : '') + (disabled && !st ? ' disabled':'');
     card.innerHTML = `
       <img src="${m.img}" alt="${m.name}" onerror="this.style.opacity=0.15">
       ${st ? `<div class="tag ${st.type==='ban'?'ban':'pick'}">${st.type==='ban'?'Бан':(st.type==='decider'?'Decider':'Пик')}</div>` : ''}
       <div class="name">${m.name}</div>`;
+    if(!disabled){ card.title = `Забанить/выбрать за ${actingTeam()==='team1'?state.team1:state.team2}`; card.onclick = ()=> performAction(m.id); }
     grid.appendChild(card);
   });
 
   renderLog();
   showLinks();
 
+  document.getElementById('undo-btn').onclick = undoLastAction;
   document.getElementById('reset-btn').onclick = async ()=>{
     if(confirm('Точно сбросить текущий матч и создать новый?')){
       if(unsub){ unsub(); unsub=null; }
